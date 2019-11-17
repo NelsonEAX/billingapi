@@ -5,7 +5,7 @@
 -- Dumped from database version 10.10
 -- Dumped by pg_dump version 10.10
 
--- Started on 2019-11-14 02:40:41
+-- Started on 2019-11-17 23:28:00
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -17,47 +17,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
-DROP DATABASE testdb;
---
--- TOC entry 2858 (class 1262 OID 17117)
--- Name: testdb; Type: DATABASE; Schema: -; Owner: postgres
---
-
-CREATE DATABASE testdb WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'Russian_Russia.1251' LC_CTYPE = 'Russian_Russia.1251';
-
-
-ALTER DATABASE testdb OWNER TO postgres;
-
-\connect testdb
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
---
--- TOC entry 1 (class 3079 OID 12924)
--- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
---
-
-CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
-
-
---
--- TOC entry 2861 (class 0 OID 0)
--- Dependencies: 1
--- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
---
-
-COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
-
 
 SET default_tablespace = '';
 
@@ -70,8 +29,9 @@ SET default_with_oids = false;
 
 CREATE TABLE public.currency (
     id bigint NOT NULL,
-    title character(100),
-    code character(3)
+    title text,
+    code text,
+    symbol character varying(1)
 );
 
 
@@ -142,7 +102,8 @@ CREATE TABLE public.settings (
     id bigint NOT NULL,
     wallets bigint[] NOT NULL,
     currency bigint NOT NULL,
-    balance double precision NOT NULL
+    balance double precision NOT NULL,
+    fee double precision NOT NULL
 );
 
 
@@ -215,8 +176,8 @@ ALTER SEQUENCE public.settings_id_seq OWNED BY public.settings.id;
 
 CREATE TABLE public.transaction (
     id bigint NOT NULL,
-    sender character(20) NOT NULL,
-    recipient character(20) NOT NULL,
+    sender text NOT NULL,
+    recipient text NOT NULL,
     info json,
     create_at timestamp without time zone NOT NULL
 );
@@ -298,10 +259,10 @@ ALTER SEQUENCE public.transaction_id_seq OWNED BY public.transaction.id;
 
 CREATE TABLE public."user" (
     id bigint NOT NULL,
-    email character(100) NOT NULL,
-    password character(100) NOT NULL,
-    name character(100),
-    surname character(100)
+    email text NOT NULL,
+    password text NOT NULL,
+    name text,
+    surname text
 );
 
 
@@ -349,7 +310,7 @@ CREATE TABLE public.wallet (
     id bigint NOT NULL,
     currency bigint NOT NULL,
     "user" bigint NOT NULL,
-    account character(20) NOT NULL,
+    account text NOT NULL,
     balance double precision DEFAULT 0 NOT NULL
 );
 
@@ -426,7 +387,7 @@ ALTER SEQUENCE public.wallet_id_seq OWNED BY public.wallet.id;
 
 
 --
--- TOC entry 2701 (class 2604 OID 17131)
+-- TOC entry 2704 (class 2604 OID 17131)
 -- Name: currency id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -434,7 +395,7 @@ ALTER TABLE ONLY public.currency ALTER COLUMN id SET DEFAULT nextval('public.cur
 
 
 --
--- TOC entry 2705 (class 2604 OID 17167)
+-- TOC entry 2708 (class 2604 OID 17167)
 -- Name: settings id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -442,7 +403,7 @@ ALTER TABLE ONLY public.settings ALTER COLUMN id SET DEFAULT nextval('public.set
 
 
 --
--- TOC entry 2704 (class 2604 OID 17152)
+-- TOC entry 2707 (class 2604 OID 17152)
 -- Name: transaction id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -450,7 +411,7 @@ ALTER TABLE ONLY public.transaction ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
--- TOC entry 2700 (class 2604 OID 17123)
+-- TOC entry 2703 (class 2604 OID 17123)
 -- Name: user id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -458,7 +419,7 @@ ALTER TABLE ONLY public."user" ALTER COLUMN id SET DEFAULT nextval('public.user_
 
 
 --
--- TOC entry 2702 (class 2604 OID 17139)
+-- TOC entry 2705 (class 2604 OID 17139)
 -- Name: wallet id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -466,68 +427,68 @@ ALTER TABLE ONLY public.wallet ALTER COLUMN id SET DEFAULT nextval('public.walle
 
 
 --
--- TOC entry 2845 (class 0 OID 17128)
+-- TOC entry 2848 (class 0 OID 17128)
 -- Dependencies: 199
 -- Data for Name: currency; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.currency (id, title, code) VALUES (1, 'U.S. dollar                                                                                         ', 'USD');
-INSERT INTO public.currency (id, title, code) VALUES (2, 'Euro                                                                                                ', 'EUR');
-INSERT INTO public.currency (id, title, code) VALUES (3, 'Yuan                                                                                                ', 'CNY');
-INSERT INTO public.currency (id, title, code) VALUES (4, 'Russian ruble                                                                                       ', 'RUB');
-INSERT INTO public.currency (id, title, code) VALUES (5, 'English Pound                                                                                       ', 'GBP');
-INSERT INTO public.currency (id, title, code) VALUES (6, 'Japanese yen                                                                                        ', 'JPY');
+INSERT INTO public.currency VALUES (1, 'U.S. dollar', 'USD', '$');
+INSERT INTO public.currency VALUES (2, 'Euro', 'EUR', '€');
+INSERT INTO public.currency VALUES (3, 'Yuan', 'CNY', '¥');
+INSERT INTO public.currency VALUES (4, 'Russian ruble', 'RUB', '₽');
+INSERT INTO public.currency VALUES (5, 'English Pound', 'GBP', '£');
+INSERT INTO public.currency VALUES (6, 'Japanese yen', 'JPY', '¥');
 
 
 --
--- TOC entry 2850 (class 0 OID 17158)
+-- TOC entry 2853 (class 0 OID 17158)
 -- Dependencies: 204
 -- Data for Name: rate; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.rate ("from", "to", percent) VALUES (1, 2, 0.90876999999999997);
-INSERT INTO public.rate ("from", "to", percent) VALUES (1, 3, 7.0247000000000002);
-INSERT INTO public.rate ("from", "to", percent) VALUES (1, 4, 64.3249);
-INSERT INTO public.rate ("from", "to", percent) VALUES (1, 5, 0.7782);
-INSERT INTO public.rate ("from", "to", percent) VALUES (1, 6, 108.81999999999999);
-INSERT INTO public.rate ("from", "to", percent) VALUES (2, 1, 1.1004);
-INSERT INTO public.rate ("from", "to", percent) VALUES (2, 3, 7.7294);
-INSERT INTO public.rate ("from", "to", percent) VALUES (2, 4, 70.782499999999999);
-INSERT INTO public.rate ("from", "to", percent) VALUES (2, 5, 0.85641999999999996);
-INSERT INTO public.rate ("from", "to", percent) VALUES (2, 6, 119.73999999999999);
-INSERT INTO public.rate ("from", "to", percent) VALUES (3, 1, 0.14235999999999999);
-INSERT INTO public.rate ("from", "to", percent) VALUES (3, 2, 0.12938);
-INSERT INTO public.rate ("from", "to", percent) VALUES (3, 4, 9.1576000000000004);
-INSERT INTO public.rate ("from", "to", percent) VALUES (3, 5, 0.1108);
-INSERT INTO public.rate ("from", "to", percent) VALUES (3, 6, 15.494);
-INSERT INTO public.rate ("from", "to", percent) VALUES (4, 1, 0.01555);
-INSERT INTO public.rate ("from", "to", percent) VALUES (4, 2, 0.01413);
-INSERT INTO public.rate ("from", "to", percent) VALUES (4, 3, 0.10920000000000001);
-INSERT INTO public.rate ("from", "to", percent) VALUES (4, 5, 0.0121);
-INSERT INTO public.rate ("from", "to", percent) VALUES (4, 6, 1.6918);
-INSERT INTO public.rate ("from", "to", percent) VALUES (5, 1, 1.2849999999999999);
-INSERT INTO public.rate ("from", "to", percent) VALUES (5, 2, 1.1677);
-INSERT INTO public.rate ("from", "to", percent) VALUES (5, 3, 9.0251999999999999);
-INSERT INTO public.rate ("from", "to", percent) VALUES (5, 4, 82.649299999999997);
-INSERT INTO public.rate ("from", "to", percent) VALUES (5, 6, 139.83000000000001);
-INSERT INTO public.rate ("from", "to", percent) VALUES (6, 1, 0.0091900000000000003);
-INSERT INTO public.rate ("from", "to", percent) VALUES (6, 2, 0.0083510000000000008);
-INSERT INTO public.rate ("from", "to", percent) VALUES (6, 3, 0.06454);
-INSERT INTO public.rate ("from", "to", percent) VALUES (6, 4, 0.59106999999999998);
-INSERT INTO public.rate ("from", "to", percent) VALUES (6, 5, 0.0071510000000000002);
+INSERT INTO public.rate VALUES (1, 2, 0.90876999999999997);
+INSERT INTO public.rate VALUES (1, 3, 7.0247000000000002);
+INSERT INTO public.rate VALUES (1, 4, 64.3249);
+INSERT INTO public.rate VALUES (1, 5, 0.7782);
+INSERT INTO public.rate VALUES (1, 6, 108.81999999999999);
+INSERT INTO public.rate VALUES (2, 1, 1.1004);
+INSERT INTO public.rate VALUES (2, 3, 7.7294);
+INSERT INTO public.rate VALUES (2, 4, 70.782499999999999);
+INSERT INTO public.rate VALUES (2, 5, 0.85641999999999996);
+INSERT INTO public.rate VALUES (2, 6, 119.73999999999999);
+INSERT INTO public.rate VALUES (3, 1, 0.14235999999999999);
+INSERT INTO public.rate VALUES (3, 2, 0.12938);
+INSERT INTO public.rate VALUES (3, 4, 9.1576000000000004);
+INSERT INTO public.rate VALUES (3, 5, 0.1108);
+INSERT INTO public.rate VALUES (3, 6, 15.494);
+INSERT INTO public.rate VALUES (4, 1, 0.01555);
+INSERT INTO public.rate VALUES (4, 2, 0.01413);
+INSERT INTO public.rate VALUES (4, 3, 0.10920000000000001);
+INSERT INTO public.rate VALUES (4, 5, 0.0121);
+INSERT INTO public.rate VALUES (4, 6, 1.6918);
+INSERT INTO public.rate VALUES (5, 1, 1.2849999999999999);
+INSERT INTO public.rate VALUES (5, 2, 1.1677);
+INSERT INTO public.rate VALUES (5, 3, 9.0251999999999999);
+INSERT INTO public.rate VALUES (5, 4, 82.649299999999997);
+INSERT INTO public.rate VALUES (5, 6, 139.83000000000001);
+INSERT INTO public.rate VALUES (6, 1, 0.0091900000000000003);
+INSERT INTO public.rate VALUES (6, 2, 0.0083510000000000008);
+INSERT INTO public.rate VALUES (6, 3, 0.06454);
+INSERT INTO public.rate VALUES (6, 4, 0.59106999999999998);
+INSERT INTO public.rate VALUES (6, 5, 0.0071510000000000002);
 
 
 --
--- TOC entry 2852 (class 0 OID 17164)
+-- TOC entry 2855 (class 0 OID 17164)
 -- Dependencies: 206
 -- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.settings (id, wallets, currency, balance) VALUES (1, '{1,2,3}', 1, 100);
+INSERT INTO public.settings VALUES (1, '{1,2,3}', 1, 100, 3);
 
 
 --
--- TOC entry 2849 (class 0 OID 17149)
+-- TOC entry 2852 (class 0 OID 17149)
 -- Dependencies: 203
 -- Data for Name: transaction; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -535,31 +496,32 @@ INSERT INTO public.settings (id, wallets, currency, balance) VALUES (1, '{1,2,3}
 
 
 --
--- TOC entry 2843 (class 0 OID 17120)
+-- TOC entry 2846 (class 0 OID 17120)
 -- Dependencies: 197
 -- Data for Name: user; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public."user" (id, email, password, name, surname) VALUES (1, 'user1@example.com                                                                                   ', '12345678                                                                                            ', 'Ivan                                                                                                ', 'Petrov                                                                                              ');
-INSERT INTO public."user" (id, email, password, name, surname) VALUES (2, 'user2@example.com                                                                                   ', '12345678                                                                                            ', 'Petr                                                                                                ', 'Smirnov                                                                                             ');
-INSERT INTO public."user" (id, email, password, name, surname) VALUES (3, 'user3@example.com                                                                                   ', '12345678                                                                                            ', 'Oleg                                                                                                ', 'Ivanov                                                                                              ');
+INSERT INTO public."user" VALUES (3, 'user3@example.com', '12345678', 'Oleg', 'Ivanov');
+INSERT INTO public."user" VALUES (2, 'user2@example.com', '12345678', 'Petr', 'Smirnov');
+INSERT INTO public."user" VALUES (1, 'user1@example.com', '12345678', 'Ivan', 'Petrov');
+INSERT INTO public."user" VALUES (6, 'user4@example.com', '12345678', 'Иван', 'Иванов');
 
 
 --
--- TOC entry 2847 (class 0 OID 17136)
+-- TOC entry 2850 (class 0 OID 17136)
 -- Dependencies: 201
 -- Data for Name: wallet; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (1, 1, 1, '42302810570000123456', 100);
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (2, 2, 1, '40840840570000123456', 0);
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (3, 3, 1, '42303978570000123456', 0);
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (4, 1, 2, '42304810570000123456', 100);
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (5, 2, 2, '42305840570000123456', 0);
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (6, 3, 2, '42306978570000123456', 0);
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (7, 1, 3, '42307810570000123456', 100);
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (8, 2, 3, '40817840570000123456', 0);
-INSERT INTO public.wallet (id, currency, "user", account, balance) VALUES (9, 3, 3, '42301978570000123456', 0);
+INSERT INTO public.wallet VALUES (1, 1, 1, '42302810570000123456', 100);
+INSERT INTO public.wallet VALUES (2, 2, 1, '40840840570000123456', 0);
+INSERT INTO public.wallet VALUES (3, 3, 1, '42303978570000123456', 0);
+INSERT INTO public.wallet VALUES (4, 1, 2, '42304810570000123456', 100);
+INSERT INTO public.wallet VALUES (5, 2, 2, '42305840570000123456', 0);
+INSERT INTO public.wallet VALUES (6, 3, 2, '42306978570000123456', 0);
+INSERT INTO public.wallet VALUES (7, 1, 3, '42307810570000123456', 100);
+INSERT INTO public.wallet VALUES (8, 2, 3, '40817840570000123456', 0);
+INSERT INTO public.wallet VALUES (9, 3, 3, '42301978570000123456', 0);
 
 
 --
@@ -595,7 +557,7 @@ SELECT pg_catalog.setval('public.transaction_id_seq', 1, false);
 -- Name: user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.user_id_seq', 5, true);
+SELECT pg_catalog.setval('public.user_id_seq', 6, true);
 
 
 --
@@ -608,7 +570,7 @@ SELECT pg_catalog.setval('public.wallet_id_seq', 9, true);
 
 
 --
--- TOC entry 2710 (class 2606 OID 17133)
+-- TOC entry 2713 (class 2606 OID 17133)
 -- Name: currency currency_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -617,7 +579,7 @@ ALTER TABLE ONLY public.currency
 
 
 --
--- TOC entry 2720 (class 2606 OID 17172)
+-- TOC entry 2723 (class 2606 OID 17172)
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -626,7 +588,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 2717 (class 2606 OID 17157)
+-- TOC entry 2720 (class 2606 OID 17157)
 -- Name: transaction transaction_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -635,7 +597,7 @@ ALTER TABLE ONLY public.transaction
 
 
 --
--- TOC entry 2708 (class 2606 OID 17125)
+-- TOC entry 2711 (class 2606 OID 17125)
 -- Name: user user_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -644,7 +606,7 @@ ALTER TABLE ONLY public."user"
 
 
 --
--- TOC entry 2715 (class 2606 OID 17142)
+-- TOC entry 2718 (class 2606 OID 17142)
 -- Name: wallet wallet_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -653,7 +615,7 @@ ALTER TABLE ONLY public.wallet
 
 
 --
--- TOC entry 2712 (class 1259 OID 17146)
+-- TOC entry 2715 (class 1259 OID 17214)
 -- Name: unique_account; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -662,7 +624,7 @@ CREATE UNIQUE INDEX unique_account ON public.wallet USING btree (account);
 
 --
 -- TOC entry 2888 (class 0 OID 0)
--- Dependencies: 2712
+-- Dependencies: 2715
 -- Name: INDEX unique_account; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -670,7 +632,7 @@ COMMENT ON INDEX public.unique_account IS 'Счета пользователей
 
 
 --
--- TOC entry 2711 (class 1259 OID 17144)
+-- TOC entry 2714 (class 1259 OID 17238)
 -- Name: unique_code; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -678,7 +640,7 @@ CREATE UNIQUE INDEX unique_code ON public.currency USING btree (code);
 
 
 --
--- TOC entry 2706 (class 1259 OID 17143)
+-- TOC entry 2709 (class 1259 OID 17177)
 -- Name: unique_email; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -686,7 +648,7 @@ CREATE UNIQUE INDEX unique_email ON public."user" USING btree (email);
 
 
 --
--- TOC entry 2718 (class 1259 OID 17161)
+-- TOC entry 2721 (class 1259 OID 17161)
 -- Name: unique_from_to_currency; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -694,7 +656,7 @@ CREATE UNIQUE INDEX unique_from_to_currency ON public.rate USING btree ("from", 
 
 
 --
--- TOC entry 2713 (class 1259 OID 17145)
+-- TOC entry 2716 (class 1259 OID 17145)
 -- Name: unique_user_currency; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -703,23 +665,14 @@ CREATE UNIQUE INDEX unique_user_currency ON public.wallet USING btree ("user", c
 
 --
 -- TOC entry 2889 (class 0 OID 0)
--- Dependencies: 2713
+-- Dependencies: 2716
 -- Name: INDEX unique_user_currency; Type: COMMENT; Schema: public; Owner: postgres
 --
 
 COMMENT ON INDEX public.unique_user_currency IS 'У пользователя может быть только один счет для одной валюты';
 
 
---
--- TOC entry 2860 (class 0 OID 0)
--- Dependencies: 6
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
---
-
-GRANT ALL ON SCHEMA public TO PUBLIC;
-
-
--- Completed on 2019-11-14 02:40:42
+-- Completed on 2019-11-17 23:28:00
 
 --
 -- PostgreSQL database dump complete
