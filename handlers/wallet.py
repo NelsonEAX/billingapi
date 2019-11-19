@@ -96,15 +96,27 @@ class Transaction:
         if amount + commission > wallet_from['balance']:
             raise Warning('Insufficient funds, transaction not possible')
 
-        print(f'[Transaction.transaction] before recording. commission = {commission}, '
-              f'wallet_from = {wallet_from}, wallet_to = {wallet_to}')
+        rate = await get_rate(
+            engine=request.app['pg_engine'], currency_from=wallet_from['currency'], currency_to=wallet_to['currency'])
+
+        print(f'[Transaction.transaction] before: amount = {amount}, commission = {commission}, rate = {rate},\n'
+              f'wallet_from = {wallet_from},\nwallet_to   = {wallet_to}')
 
         # Проверили, что:
         #     - кошельки существуют
         #     - получили комиссию
+        #     - получили соотношение валют
         #     - проверили, что достаточно средств для перевода
 
+        wallet_from['balance'] -= commission
+        wallet_from['balance'] -= amount
+        wallet_to['balance'] += amount * rate
 
+        # Вся магия
+        await create_transaction(engine=request.app['pg_engine'], wallet_from=wallet_from, wallet_to=wallet_to,
+                                 amount=amount, commission=commission, rate=rate)
+
+        print(f'[Transaction.transaction] after:\nwallet_from = {wallet_from},\nwallet_to   = {wallet_to}')
 
 
         return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)

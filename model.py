@@ -54,7 +54,7 @@ tb_rate = sa.Table(
     'rate',
     metadata,
     # sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-    sa.Column('from', sa.ARRAY(sa.Integer)),
+    sa.Column('from', sa.Integer),
     sa.Column('to', sa.Integer),
     sa.Column('percent', sa.Float))
 
@@ -131,7 +131,6 @@ async def get_user_by_email(engine, email):
                 'surname': row[4]
             }
 
-
 async def get_user_wallets(engine, user_id):
     '''User wallets
     :param engine: DB connection
@@ -194,8 +193,25 @@ async def get_wallet(engine, account):
                 'balance': row[1],
                 'account': row[2],
                 'user': row[3],
-                'currency': {row[4]}
+                'currency': row[4]
             }
+
+async def get_rate(engine, currency_from, currency_to):
+    '''
+    :param engine:
+    :param account:
+    :return:
+    '''
+    if currency_from == currency_to:
+        return 1.0
+
+    async with engine.acquire() as conn:
+        rate = await conn.scalar(
+            f'''select "percent"
+            from rate
+            where "from" = {currency_from} and "to" = {currency_to};''')
+
+        return 1.0 if rate is None else rate
 
 # async def get_user_rules(engine, user_id):
 #     '''Obtaining user rights by id
@@ -347,6 +363,44 @@ async def create_user(engine, data):
 
         # await set_rules_for_user(engine=engine, user_id=user_id, data=data)
         return user_id
+
+async def create_transaction(engine, wallet_from, wallet_to, **kwargs):
+    '''
+    If an error occurs, we will rollback the changes.
+    And the balances will not change
+    :param engine:
+    :param wallet_from:
+    :param wallet_to:
+    :return:
+    '''
+
+    update_from = f'''update wallet set balance={wallet_from['balance']} where account='{wallet_from['account']}';'''
+    update_to = f'''update wallet set balance={wallet_to['balance']} where account='{wallet_to['account']}';'''
+
+    timestamp = get_timestamp_str()
+    info = {
+        'amount': kwargs['amount'],
+        'commission': kwargs['commission'],
+        'rate': kwargs['rate'],
+        'from': wallet_from,
+        'to': wallet_to
+    }
+
+    transaction = f'''insert into "transaction"
+(sender, recipient, info, create_at)
+VALUES('{update_from['account']}', '{update_to['account']}', '{info}', {timestamp});'''
+
+    async with engine.acquire() as conn:
+        await conn.execute(
+            f'''BEGIN;
+            {update_from}
+            {update_to}
+            {transaction}
+            COMMIT;''')
+
+
+
+
 
 # async def update_user(engine, data):
 #     '''User data update
