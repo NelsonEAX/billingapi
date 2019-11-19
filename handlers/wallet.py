@@ -99,24 +99,31 @@ class Transaction:
         rate = await get_rate(
             engine=request.app['pg_engine'], currency_from=wallet_from['currency'], currency_to=wallet_to['currency'])
 
-        print(f'[Transaction.transaction] before: amount = {amount}, commission = {commission}, rate = {rate},\n'
-              f'wallet_from = {wallet_from},\nwallet_to   = {wallet_to}')
-
         # Проверили, что:
         #     - кошельки существуют
         #     - получили комиссию
         #     - получили соотношение валют
         #     - проверили, что достаточно средств для перевода
 
+        info = {
+            'amount_from': amount,                      # сумма списания
+            'amount_to': amount * rate,                 # сумма зачисления
+            'commission': commission,                   # комиссия
+            'rate': rate,                               # курс конвертации валют
+            'wallet_from_before': wallet_from.copy(),   # Кошелек отправителя ДО (создаем копию, чтоб не изменялась)
+            'wallet_to_before': wallet_to.copy(),       # Кошелек получателя ДО (создаем копию, чтоб не изменялась)
+            'wallet_from_after': wallet_from,           # Кошелек отправителя ПОСЛЕ (ссылка на изменяемый объект)
+            'wallet_to_after': wallet_to                # Кошелек получателя ПОСЛЕ (ссылка на изменяемый объект)
+        }
+
         wallet_from['balance'] -= commission
         wallet_from['balance'] -= amount
         wallet_to['balance'] += amount * rate
 
-        # Вся магия
-        await create_transaction(engine=request.app['pg_engine'], wallet_from=wallet_from, wallet_to=wallet_to,
-                                 amount=amount, commission=commission, rate=rate)
+        # Вся магия в одной транзакции
+        await create_transaction(engine=request.app['pg_engine'],
+                                 wallet_from=wallet_from, wallet_to=wallet_to, info=info)
 
-        print(f'[Transaction.transaction] after:\nwallet_from = {wallet_from},\nwallet_to   = {wallet_to}')
-
+        print(f'[Transaction.transaction] info:\n{info}')
 
         return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)

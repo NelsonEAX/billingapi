@@ -3,6 +3,9 @@
 
 import base64
 import time
+import json
+import random
+import string
 from os.path import isfile
 
 import sqlalchemy as sa
@@ -348,23 +351,25 @@ async def create_user(engine, data):
         if user is not None:
             raise Warning('A user with this email already exists.')
 
-        user_id = await conn.scalar(
-            tb_user.insert(None).values(
-                email=data['email'],
-                password=data['password'],
-                name=data['name'],
-                surname=data['surname']))
+        user_id = await conn.scalar(tb_user.insert(None).values(
+            email=data['email'],
+            password=data['password'],
+            name=data['name'],
+            surname=data['surname']))
 
         # Create wallet for user from settings
+        settings = await get_settings(engine=engine)
+        for currency in settings['wallets']:
 
-
-
-        # Set ballance from settings
-
-        # await set_rules_for_user(engine=engine, user_id=user_id, data=data)
+            account = ''.join(random.choice(string.digits) for _ in range(20))
+            await conn.scalar(tb_wallet.insert(None).values(
+                currency=currency,
+                user=user_id,
+                account=account,
+                balance= settings['balance'] if settings['currency'] == currency else 0))
         return user_id
 
-async def create_transaction(engine, wallet_from, wallet_to, **kwargs):
+async def create_transaction(engine, wallet_from, wallet_to, info):
     '''
     If an error occurs, we will rollback the changes.
     And the balances will not change
@@ -377,18 +382,8 @@ async def create_transaction(engine, wallet_from, wallet_to, **kwargs):
     update_from = f'''update wallet set balance={wallet_from['balance']} where account='{wallet_from['account']}';'''
     update_to = f'''update wallet set balance={wallet_to['balance']} where account='{wallet_to['account']}';'''
 
-    timestamp = get_timestamp_str()
-    info = {
-        'amount': kwargs['amount'],
-        'commission': kwargs['commission'],
-        'rate': kwargs['rate'],
-        'from': wallet_from,
-        'to': wallet_to
-    }
-
-    transaction = f'''insert into "transaction"
-(sender, recipient, info, create_at)
-VALUES('{update_from['account']}', '{update_to['account']}', '{info}', {timestamp});'''
+    transaction = f'''insert into "transaction" (sender, recipient, info, create_at)
+    VALUES('{wallet_from['account']}', '{wallet_to['account']}', '{json.dumps(info)}', '{get_timestamp_str()}');'''
 
     async with engine.acquire() as conn:
         await conn.execute(
@@ -397,10 +392,6 @@ VALUES('{update_from['account']}', '{update_to['account']}', '{info}', {timestam
             {update_to}
             {transaction}
             COMMIT;''')
-
-
-
-
 
 # async def update_user(engine, data):
 #     '''User data update
