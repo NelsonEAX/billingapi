@@ -78,7 +78,7 @@ async def try_except_middleware(request, handler):
     try:
         return await handler(request)
     except Exception as exc:
-        print('[try_catch_middleware] except ', exc)
+        print('[try_catch_middleware] except:', exc)
         return web.json_response({
             'status': 'error',
             'message': str(exc)

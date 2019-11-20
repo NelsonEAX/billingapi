@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''Wallet page module'''
 import re
+import asyncio
 from builtins import staticmethod
 
 from aiohttp_session import get_session
@@ -66,64 +67,89 @@ class Transaction:
         :param request:
         :return:
         '''
+
         print('[Transaction.transaction] start')
 
+        # Максимально быстро блокируем кошелек для дальнейшей обработки
         post = await request.json()
-
-        # Минимальная проверка входных данных
-        if post['from'] is None or not re.match(r'^\d{20}$', post['from']) \
-                or post['to'] is None or not re.match(r'^\d{20}$', post['to']) \
-                or post['amount'] is None or not re.match(r'^\d*[,.]?\d*$', post['amount']):
+        if post['from'] is None or not re.match(r'^\d{20}$', post['from']):
             raise Warning('Invalid data, transaction not possible')
 
-        # session = await get_session(request) # TODO: middleware
-        # user_wallets = await get_user_wallets(engine=request.app['pg_engine'], user_id=session['id'])
-        # all_wallets = await get_all_wallets(engine=request.app['pg_engine'])
-        settings = await get_settings(engine=request.app['pg_engine'])
-        amount = float(post['amount'])
+        try:
+            # Если заблокирован - ждем
+            while True:
+                locked = await get_wallet_locked(engine=request.app['pg_engine'], account=post['from'])
+                if not locked:
+                    break
 
-        wallet_from = await get_wallet(engine=request.app['pg_engine'], account=post['from'])
-        wallet_to = await get_wallet(engine=request.app['pg_engine'], account=post['to'])
+                print(f'''[Transaction.transaction] wallet '{post['from']}' locked, sleep''')
+                await asyncio.sleep(1)
 
-        if wallet_from is None or wallet_to is None:
-            raise Warning('Invalid data, transaction not possible')
 
-        if wallet_from['user'] == wallet_to['user']:
-            commission = 0
-        else:
-            commission = settings['fee'] * amount * 0.01
+            result = await set_wallet_locked(engine=request.app['pg_engine'], account=post['from'], state=True)
+            print(f'''[Transaction.transaction] wallet '{post['from']}' {result}''')
+            await asyncio.sleep(3)
 
-        if amount + commission > wallet_from['balance']:
-            raise Warning('Insufficient funds, transaction not possible')
 
-        rate = await get_rate(
-            engine=request.app['pg_engine'], currency_from=wallet_from['currency'], currency_to=wallet_to['currency'])
 
-        # Проверили, что:
-        #     - кошельки существуют
-        #     - получили комиссию
-        #     - получили соотношение валют
-        #     - проверили, что достаточно средств для перевода
+            # Минимальная проверка входных данных
+            if post['to'] is None or not re.match(r'^\d{20}$', post['to']) \
+                    or post['amount'] is None or not re.match(r'^\d*[,.]?\d*$', post['amount']):
+                raise Warning('Invalid data, transaction not possible')
 
-        info = {
-            'amount_from': amount,                      # сумма списания
-            'amount_to': amount * rate,                 # сумма зачисления
-            'commission': commission,                   # комиссия
-            'rate': rate,                               # курс конвертации валют
-            'wallet_from_before': wallet_from.copy(),   # Кошелек отправителя ДО (создаем копию, чтоб не изменялась)
-            'wallet_to_before': wallet_to.copy(),       # Кошелек получателя ДО (создаем копию, чтоб не изменялась)
-            'wallet_from_after': wallet_from,           # Кошелек отправителя ПОСЛЕ (ссылка на изменяемый объект)
-            'wallet_to_after': wallet_to                # Кошелек получателя ПОСЛЕ (ссылка на изменяемый объект)
-        }
+            # session = await get_session(request) # TODO: middleware
+            # user_wallets = await get_user_wallets(engine=request.app['pg_engine'], user_id=session['id'])
+            # all_wallets = await get_all_wallets(engine=request.app['pg_engine'])
+            settings = await get_settings(engine=request.app['pg_engine'])
+            amount = float(post['amount'])
 
-        wallet_from['balance'] -= commission
-        wallet_from['balance'] -= amount
-        wallet_to['balance'] += amount * rate
+            wallet_from = await get_wallet(engine=request.app['pg_engine'], account=post['from'])
+            wallet_to = await get_wallet(engine=request.app['pg_engine'], account=post['to'])
 
-        # Вся магия в одной транзакции
-        await create_transaction(engine=request.app['pg_engine'],
-                                 wallet_from=wallet_from, wallet_to=wallet_to, info=info)
+            if wallet_from is None or wallet_to is None:
+                raise Warning('Invalid data, transaction not possible')
 
-        print(f'[Transaction.transaction] info:\n{info}')
+            if wallet_from['user'] == wallet_to['user']:
+                commission = 0
+            else:
+                commission = settings['fee'] * amount * 0.01
 
-        return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)
+            if amount + commission > wallet_from['balance']:
+                raise Warning('Insufficient funds, transaction not possible')
+
+            rate = await get_rate(
+                engine=request.app['pg_engine'], currency_from=wallet_from['currency'], currency_to=wallet_to['currency'])
+
+            # Проверили, что:
+            #     - кошельки существуют
+            #     - получили комиссию
+            #     - получили соотношение валют
+            #     - проверили, что достаточно средств для перевода
+
+            info = {
+                'amount_from': amount,                      # сумма списания
+                'amount_to': amount * rate,                 # сумма зачисления
+                'commission': commission,                   # комиссия
+                'rate': rate,                               # курс конвертации валют
+                'wallet_from_before': wallet_from.copy(),   # Кошелек отправителя ДО (создаем копию, чтоб не изменялась)
+                'wallet_to_before': wallet_to.copy(),       # Кошелек получателя ДО (создаем копию, чтоб не изменялась)
+                'wallet_from_after': wallet_from,           # Кошелек отправителя ПОСЛЕ (ссылка на изменяемый объект)
+                'wallet_to_after': wallet_to                # Кошелек получателя ПОСЛЕ (ссылка на изменяемый объект)
+            }
+
+            wallet_from['balance'] -= commission
+            wallet_from['balance'] -= amount
+            wallet_to['balance'] += amount * rate
+
+            # Вся магия в одной транзакции
+            await create_transaction(engine=request.app['pg_engine'],
+                                     wallet_from=wallet_from, wallet_to=wallet_to, info=info)
+
+            print(f'[Transaction.transaction] info:\n{info}')
+
+            return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)
+
+
+        finally:
+            print(f'''[Transaction.transaction] wallet '{post['from']}' unlock''')
+            await set_wallet_locked(engine=request.app['pg_engine'], account=post['from'], state=False)

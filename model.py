@@ -86,7 +86,8 @@ tb_wallet = sa.Table(
     sa.Column('currency', sa.Integer),
     sa.Column('user', sa.Integer),
     sa.Column('account', sa.String(20)),
-    sa.Column('balance', sa.Float))
+    sa.Column('balance', sa.Float),
+    sa.Column('locked', sa.Boolean))
 
 tb_user = sa.Table(
     'user',
@@ -198,6 +199,32 @@ async def get_wallet(engine, account):
                 'user': row[3],
                 'currency': row[4]
             }
+
+
+async def get_wallet_locked(engine, account):
+    '''
+    :param engine:
+    :param account:
+    :return:
+    '''
+    async with engine.acquire() as conn:
+        sql = f'''select w.locked is True
+            from wallet as w
+            where w.account = '{account}';'''
+        return await conn.scalar(sql)
+
+async def set_wallet_locked(engine, account, state):
+    '''
+    :param engine:
+    :param account:
+    :return:
+    '''
+    async with engine.acquire() as conn:
+        result = await conn.execute(
+            f'''update wallet as w
+            set "locked"={state}
+            where w.account = '{account}';''')
+        return result
 
 async def get_rate(engine, currency_from, currency_to):
     '''
