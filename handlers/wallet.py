@@ -61,36 +61,45 @@ class Currency:
 
 class Transaction:
 
-    @staticmethod
-    async def transaction(request):
-        '''Get all currencies without session
-        :param request:
-        :return:
-        '''
+    # queue = asyncio.Queue()
+    semaphore = asyncio.Semaphore(value=1)
 
-        print('[Transaction.transaction] start')
+    # def __init__(self):
+    #     ''''''
+    #     print('[Transaction.__init__]')
+    #     self.queue = asyncio.Queue(maxsize=100)
+
+    @staticmethod
+    async def coro(request):
+        ''''''
 
         # Максимально быстро блокируем кошелек для дальнейшей обработки
         post = await request.json()
         if post['from'] is None or not re.match(r'^\d{20}$', post['from']):
             raise Warning('Invalid data, transaction not possible')
+        print(f'''[Transaction.transaction] post '{post}' ''')
 
         try:
+            await request.app['semaphore']\
+                .setdefault(post['from'], asyncio.Semaphore(value=1))\
+                .acquire()
             # Если заблокирован - ждем
-            while True:
-                locked = await get_wallet_locked(engine=request.app['pg_engine'], account=post['from'])
-                if not locked:
-                    break
-
-                print(f'''[Transaction.transaction] wallet '{post['from']}' locked, sleep''')
-                await asyncio.sleep(1)
+            # while True:
+            #     locked = await get_wallet_locked(engine=request.app['pg_engine'], account=post['from'])
+            #     if not locked:
+            #         break
+            #
+            #     print(f'''[Transaction.transaction] wallet '{post['from']}' locked, sleep''')
+            #     await asyncio.sleep(1)
 
 
             result = await set_wallet_locked(engine=request.app['pg_engine'], account=post['from'], state=True)
             print(f'''[Transaction.transaction] wallet '{post['from']}' {result}''')
-            await asyncio.sleep(3)
 
-
+            await asyncio.sleep(1)
+            r = 0
+            for i in range(10000):
+                r += i
 
             # Минимальная проверка входных данных
             if post['to'] is None or not re.match(r'^\d{20}$', post['to']) \
@@ -147,9 +156,77 @@ class Transaction:
 
             print(f'[Transaction.transaction] info:\n{info}')
 
-            return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)
 
+            # return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)
 
+        except Exception as exc:
+            print('[try_catch_middleware] except:', exc)
+            # return web.json_response({
+            #     'status': 'error',
+            #     'message': str(exc)
+            # }, status=(401 if type(exc).__name__ == 'Warning' else 500))
         finally:
-            print(f'''[Transaction.transaction] wallet '{post['from']}' unlock''')
-            await set_wallet_locked(engine=request.app['pg_engine'], account=post['from'], state=False)
+            # print(f'''[Transaction.transaction] wallet '{post['from']}' unlock''')
+            # await set_wallet_locked(engine=request.app['pg_engine'], account=post['from'], state=False)
+            # await Transaction.semaphore.release()
+
+            print(request.app['semaphore'].keys())
+            request.app['semaphore'] \
+                .setdefault(post['from'], asyncio.Semaphore(value=1)) \
+                .release()
+
+            return web.json_response({'status': 'succes', 'message': 'transaction to queue'}, status=200)
+
+    # @staticmethod
+    # async def prod(self, app):
+    #     '''
+    #     '''
+    #     print('[Transaction.prod] start')
+    #     while True:
+    #
+    #         # if app['queue_transaction'].qsize() > 0:
+    #         try:
+    #         # if Transaction.queue.qsize() == 0:
+    #         #     continue
+    #         # if Transaction.queue.qsize() > 0:
+    #             print(f'''[Transaction.prod] queue size {app['queue_transaction'].qsize()}''')
+    #
+    #             request = await app['queue_transaction'].get()
+    #             print(f'[Transaction.prod] 000')
+    #             response = await self.coro(request=request)
+    #
+    #
+    #
+    #             print(f'[Transaction.prod] 001 response {response}')
+    #         # Transaction.queue.task_done()
+    #
+    #         except Exception as exc:
+    #
+    #             print('[Transaction.prod] except:', exc)
+    #
+    #         finally:
+    #             app['queue_transaction'].task_done()
+    #             print(f'[Transaction.prod] 002')
+            # else:
+            #     await asyncio.sleep(0.1)
+
+    @staticmethod
+    async def transaction(request):
+        '''Get all currencies without session
+        :param request:
+        :return:
+        '''
+
+        print('[Transaction.transaction] start')
+        # await request.app['queue_transaction'].put(request)
+        # await request.app['queue_transaction'].put(request)
+        # await request.app['queue_transaction'].put(request)
+        # await Transaction.queue.put(request)
+        # await Transaction.queue.put(request)
+        # await Transaction.queue.put(request)
+        await Transaction.coro(request)
+
+        return web.json_response({'status': 'succes', 'message': 'transaction to queue'}, status=200)
+
+
+

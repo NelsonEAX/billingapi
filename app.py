@@ -6,6 +6,7 @@ Setting up templates, adding routes
 '''
 import ssl
 import base64
+import asyncio
 from os.path import isfile
 
 from aiohttp_session import session_middleware
@@ -34,6 +35,22 @@ app = web.Application(middlewares=[
 
 # app.on_startup.append(create_pg_engine)
 # app.on_cleanup.append(dispose_pg_engine)
+
+
+
+# async def start_background_tasks(app):
+#     app['queue_transaction'] = asyncio.Queue()
+#     app['complete_transaction'] = asyncio.create_task(transaction.prod(app))
+#
+#
+# async def cleanup_background_tasks(app):
+#     await app['queue_transaction'].join()
+#     app['complete_transaction'].cancel()
+#     await app['complete_transaction']
+#
+# app.on_startup.append(start_background_tasks)
+# app.on_cleanup.append(cleanup_background_tasks)
+app['semaphore'] = dict()
 app.cleanup_ctx.append(pg_engine_ctx)
 
 
@@ -45,6 +62,7 @@ app.cleanup_ctx.append(pg_engine_ctx)
 # app.router.add_view('/auth', view_auth, name='auth')
 
 # auth = Auth()
+# transaction = Transaction()
 app.router.add_post('/signin', Auth.signin)
 app.router.add_post('/signup', Auth.signup)
 app.router.add_post('/signout', Auth.signout)
@@ -55,7 +73,7 @@ app.router.add_post('/wallets/all', Wallet.all_wallets)
 
 app.router.add_post('/settings', Currency.settings)
 app.router.add_post('/currencies', Currency.currencies)
-app.router.add_post('/transaction', Transaction.transaction)
+app.router.add_post('/transaction', Transaction.coro)
 
 
 # `aiohttp_cors.setup` returns `aiohttp_cors.CorsConfig` instance.
