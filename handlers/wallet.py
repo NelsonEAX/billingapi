@@ -58,16 +58,17 @@ class Currency:
         settings = await get_settings(engine=request.app['pg_engine'])
         return web.json_response({'status': 'succes', 'message': 'settings ok', 'settings': settings}, status=200)
 
+    @staticmethod
+    async def rates(request):
+        '''Get rates
+        :param request:
+        :return:
+        '''
+        print('[Currency.settings]')
+        rates = await get_rates(engine=request.app['pg_engine'])
+        return web.json_response({'status': 'succes', 'message': 'settings ok', 'rates': rates}, status=200)
 
 class Transaction:
-
-    # queue = asyncio.Queue()
-    semaphore = asyncio.Semaphore(value=1)
-
-    # def __init__(self):
-    #     ''''''
-    #     print('[Transaction.__init__]')
-    #     self.queue = asyncio.Queue(maxsize=100)
 
     @staticmethod
     async def coro(request):
@@ -83,18 +84,6 @@ class Transaction:
             await request.app['semaphore']\
                 .setdefault(post['from'], asyncio.Semaphore(value=1))\
                 .acquire()
-            # Если заблокирован - ждем
-            # while True:
-            #     locked = await get_wallet_locked(engine=request.app['pg_engine'], account=post['from'])
-            #     if not locked:
-            #         break
-            #
-            #     print(f'''[Transaction.transaction] wallet '{post['from']}' locked, sleep''')
-            #     await asyncio.sleep(1)
-
-
-            result = await set_wallet_locked(engine=request.app['pg_engine'], account=post['from'], state=True)
-            print(f'''[Transaction.transaction] wallet '{post['from']}' {result}''')
 
             await asyncio.sleep(1)
             r = 0
@@ -106,9 +95,6 @@ class Transaction:
                     or post['amount'] is None or not re.match(r'^\d*[,.]?\d*$', post['amount']):
                 raise Warning('Invalid data, transaction not possible')
 
-            # session = await get_session(request) # TODO: middleware
-            # user_wallets = await get_user_wallets(engine=request.app['pg_engine'], user_id=session['id'])
-            # all_wallets = await get_all_wallets(engine=request.app['pg_engine'])
             settings = await get_settings(engine=request.app['pg_engine'])
             amount = float(post['amount'])
 
@@ -156,9 +142,6 @@ class Transaction:
 
             print(f'[Transaction.transaction] info:\n{info}')
 
-
-            # return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)
-
         except Exception as exc:
             print('[try_catch_middleware] except:', exc)
             # return web.json_response({
@@ -166,16 +149,12 @@ class Transaction:
             #     'message': str(exc)
             # }, status=(401 if type(exc).__name__ == 'Warning' else 500))
         finally:
-            # print(f'''[Transaction.transaction] wallet '{post['from']}' unlock''')
-            # await set_wallet_locked(engine=request.app['pg_engine'], account=post['from'], state=False)
-            # await Transaction.semaphore.release()
-
             print(request.app['semaphore'].keys())
             request.app['semaphore'] \
                 .setdefault(post['from'], asyncio.Semaphore(value=1)) \
                 .release()
 
-            return web.json_response({'status': 'succes', 'message': 'transaction to queue'}, status=200)
+            return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)
 
     # @staticmethod
     # async def prod(self, app):

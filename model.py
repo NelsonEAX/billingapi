@@ -86,8 +86,7 @@ tb_wallet = sa.Table(
     sa.Column('currency', sa.Integer),
     sa.Column('user', sa.Integer),
     sa.Column('account', sa.String(20)),
-    sa.Column('balance', sa.Float),
-    sa.Column('locked', sa.Boolean))
+    sa.Column('balance', sa.Float))
 
 tb_user = sa.Table(
     'user',
@@ -118,6 +117,15 @@ async def get_settings(engine):
     async with engine.acquire() as conn:
         async for row in await conn.execute(tb_settings.select().order_by(sa.desc(tb_settings.c.id)).limit(1)):
             return {'id': row[0], 'wallets': row[1], 'currency': row[2], 'balance': row[3], 'fee': row[4]}
+
+async def get_rates(engine):
+    '''
+    :param engine:
+    :return:
+    '''
+    async with engine.acquire() as conn:
+        async for row in await conn.execute(tb_rate.select()):
+            return {'from': row[0], 'to': row[1], 'percent': row[2]}
 
 async def get_user_by_email(engine, email):
     '''User existence check
@@ -201,30 +209,30 @@ async def get_wallet(engine, account):
             }
 
 
-async def get_wallet_locked(engine, account):
-    '''
-    :param engine:
-    :param account:
-    :return:
-    '''
-    async with engine.acquire() as conn:
-        sql = f'''select w.locked is True
-            from wallet as w
-            where w.account = '{account}';'''
-        return await conn.scalar(sql)
+# async def get_wallet_locked(engine, account):
+#     '''
+#     :param engine:
+#     :param account:
+#     :return:
+#     '''
+#     async with engine.acquire() as conn:
+#         sql = f'''select w.locked is True
+#             from wallet as w
+#             where w.account = '{account}';'''
+#         return await conn.scalar(sql)
 
-async def set_wallet_locked(engine, account, state):
-    '''
-    :param engine:
-    :param account:
-    :return:
-    '''
-    async with engine.acquire() as conn:
-        result = await conn.execute(
-            f'''update wallet as w
-            set "locked"={state}
-            where w.account = '{account}';''')
-        return result
+# async def set_wallet_locked(engine, account, state):
+#     '''
+#     :param engine:
+#     :param account:
+#     :return:
+#     '''
+#     async with engine.acquire() as conn:
+#         result = await conn.execute(
+#             f'''update wallet as w
+#             set "locked"={state}
+#             where w.account = '{account}';''')
+#         return result
 
 async def get_rate(engine, currency_from, currency_to):
     '''
@@ -406,8 +414,14 @@ async def create_transaction(engine, wallet_from, wallet_to, info):
     :return:
     '''
 
-    update_from = f'''update wallet set balance={wallet_from['balance']} where account='{wallet_from['account']}';'''
-    update_to = f'''update wallet set balance={wallet_to['balance']} where account='{wallet_to['account']}';'''
+    # Так мы точно работаем с текущими значениями, но в транзакции данные могут быть
+    update_from = f'''update wallet 
+    set balance=balance - {info['amount_from']} 
+    where account='{wallet_from['account']}';'''
+
+    update_to = f'''update wallet 
+    set balance=balance + {info['amount_to']} 
+    where account='{wallet_to['account']}';'''
 
     transaction = f'''insert into "transaction" (sender, recipient, info, create_at)
     VALUES('{wallet_from['account']}', '{wallet_to['account']}', '{json.dumps(info)}', '{get_timestamp_str()}');'''
