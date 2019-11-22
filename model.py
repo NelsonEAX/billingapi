@@ -124,8 +124,17 @@ async def get_rates(engine):
     :return:
     '''
     async with engine.acquire() as conn:
-        async for row in await conn.execute(tb_rate.select()):
-            return {'from': row[0], 'to': row[1], 'percent': row[2]}
+        rates = []
+        async for row in await conn.execute(
+                '''select
+                cf.title as from_title, cf.code as from_code, cf.symbol as from_symbol,
+                r.from, r.to, r.percent,
+                ct.title as to_title, ct.code as to_code, ct.symbol as to_symbol
+                from rate r
+                left join currency cf on cf.id = r.from
+                left join currency ct on ct.id = r.to'''):
+            rates.append({'from': row[0], 'to': row[1], 'percent': row[2]})
+        return rates
 
 async def get_user_by_email(engine, email):
     '''User existence check
