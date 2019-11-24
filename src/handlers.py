@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 '''Handlers'''
 import re
+import json
 import asyncio
 from builtins import staticmethod
 
 from aiohttp_session import get_session
 from aiohttp import web
 
-# pylint: disable=import-error
-from model import *
-# pylint: enable=import-error
+from model import create_user, create_transaction, get_user_by_email, get_user_wallets, \
+    get_all_wallets, get_currencies, get_settings, get_rates, get_rate, \
+    get_wallet, get_wallet_history
+
+# Transaction test delay
+SLEEP = 1
+
 
 class Auth:
-
-    def __init__(self):
-        ''''''
-        print('[Auth.__init__]')
-        pass
+    '''A class containing user atorization processing methods'''
 
     @staticmethod
     async def signup(request):
@@ -24,8 +25,6 @@ class Auth:
         :param request:
         :return:
         '''
-        print('[Auth.signup]')
-
         post = await request.json()
         if post['email'] is None or post['password'] is None:
             raise Warning('Invalid data')
@@ -36,7 +35,11 @@ class Auth:
         session['id'] = post['id']
         session['email'] = post['email']
 
-        return web.json_response({'status': 'succes', 'message': 'signup ok', 'user': post}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'signup ok',
+            'user': post
+        }, status=200)
 
     @staticmethod
     async def signin(request):
@@ -44,7 +47,6 @@ class Auth:
         :param request: post contains email and password fields
         :return:
         '''
-        print('[Auth.signin]')
         post = await request.json()
         if post['email'] is None or post['password'] is None:
             raise Warning('Invalid data')
@@ -61,7 +63,11 @@ class Auth:
         session['email'] = user['email']
 
         print('[Auth.signin] user', str(user))
-        return web.json_response({'status': 'succes', 'message': 'signin ok', 'user': user}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'signin ok',
+            'user': user
+        }, status=200)
 
     @staticmethod
     async def signout(request):
@@ -69,10 +75,12 @@ class Auth:
         :param request: post-request
         :return:
         '''
-        print('[Auth.signout]')
         session = await get_session(request)
         session.clear()
-        return web.json_response({'status': 'succes', 'message': 'signout ok'}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'signout ok'
+        }, status=200)
 
     @staticmethod
     async def session(request):
@@ -80,15 +88,19 @@ class Auth:
         :param request: post-request
         :return: status and service message
         '''
-        print('[Auth.session]')
         session = await get_session(request)
         user = {'id': session['id'], 'email': session['email']}
 
         print('[Auth.session] session', str(user))
-        return web.json_response({'status': 'succes', 'message': 'session ok', 'user': user}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'session ok',
+            'user': user
+        }, status=200)
 
 
 class Wallet:
+    '''A class containing wallet processing methods. Need user session'''
 
     @staticmethod
     async def user_wallets(request):
@@ -96,23 +108,30 @@ class Wallet:
         :param request:
         :return:
         '''
-        print('[Wallet.user_wallets]')
         session = await get_session(request)
         wallets = await get_user_wallets(engine=request.app['pg_engine'], user_id=session['id'])
-        return web.json_response({'status': 'succes', 'message': 'user_wallets ok', 'wallets': wallets}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'user_wallets ok',
+            'wallets': wallets
+        }, status=200)
 
     @staticmethod
     async def all_wallets(request):
-        '''Get user wallet from session.id
+        '''Get all wallet
         :param request:
         :return:
         '''
-        print('[Wallet.all_wallets]')
         wallets = await get_all_wallets(engine=request.app['pg_engine'])
-        return web.json_response({'status': 'succes', 'message': 'all_wallets ok', 'wallets': wallets}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'all_wallets ok',
+            'wallets': wallets
+        }, status=200)
 
 
 class Currency:
+    '''Information data class'''
 
     @staticmethod
     async def currencies(request):
@@ -120,54 +139,90 @@ class Currency:
         :param request:
         :return:
         '''
-        print('[Currency.currencies]')
         currencies = await get_currencies(engine=request.app['pg_engine'])
-        return web.json_response({'status': 'succes', 'message': 'currencies ok', 'currencies': currencies}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'currencies ok',
+            'currencies': currencies
+        }, status=200)
 
     @staticmethod
     async def settings(request):
-        '''Get settings
+        '''Get settings without session
         :param request:
         :return:
         '''
-        print('[Currency.settings]')
         settings = await get_settings(engine=request.app['pg_engine'])
-        return web.json_response({'status': 'succes', 'message': 'settings ok', 'settings': settings}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'settings ok',
+            'settings': settings
+        }, status=200)
 
     @staticmethod
     async def rates(request):
-        '''Get rates
+        '''Get rates without session
         :param request:
         :return:
         '''
-        print('[Currency.settings]')
         rates = await get_rates(engine=request.app['pg_engine'])
-        return web.json_response({'status': 'succes', 'message': 'settings ok', 'rates': rates}, status=200)
+        return web.json_response({
+            'status': 'succes',
+            'message': 'settings ok',
+            'rates': rates
+        }, status=200)
 
 
 class Transaction:
+    '''Class for working with transactions. Need user session'''
 
     @staticmethod
-    async def coro(request):
-        ''''''
+    async def history(request):
+        '''Wallet income history
+        :param request:
+        :return:
+        '''
+        post = await request.json()
+        if post['wallet'] is None or not re.match(r'^\d{20}$', post['wallet']):
+            raise Warning('Invalid data, history not possible')
 
-        # Максимально быстро блокируем кошелек для дальнейшей обработки
+        session = await get_session(request)
+        wallets = await get_user_wallets(engine=request.app['pg_engine'], user_id=session['id'])
+
+        for wallet in wallets:
+            if wallet['account'] == post['wallet']:
+                history = await get_wallet_history(
+                    engine=request.app['pg_engine'],
+                    wallet=post['wallet'],
+                    datefrom=post['datefrom'],
+                    dateto=post['dateto'])
+                return web.json_response({
+                    'status': 'succes',
+                    'message': 'history ok',
+                    'history': history
+                }, status=200)
+
+        raise Warning('Invalid data, history not possible')
+
+    @staticmethod
+    async def transaction(request):
+        '''Transfer from wallet to wallet
+        :param request:
+        :return:
+        '''
+        # Lock the wallet as quickly as possible for further processing
         post = await request.json()
         if post['from'] is None or not re.match(r'^\d{20}$', post['from']):
             raise Warning('Invalid data, transaction not possible')
-        print(f'''[Transaction.transaction] post '{post}' ''')
 
         try:
-            await request.app['semaphore']\
-                .setdefault(post['from'], asyncio.Semaphore(value=1))\
+            await request.app['semaphore'] \
+                .setdefault(post['from'], asyncio.Semaphore(value=1)) \
                 .acquire()
 
-            await asyncio.sleep(1)
-            r = 0
-            for i in range(10000):
-                r += i
+            await asyncio.sleep(SLEEP)
 
-            # Минимальная проверка входных данных
+            # Minimal input validation
             if post['to'] is None or not re.match(r'^\d{20}$', post['to']) \
                     or post['amount'] is None or not re.match(r'^\d*[,.]?\d*$', post['amount']):
                 raise Warning('Invalid data, transaction not possible')
@@ -190,7 +245,8 @@ class Transaction:
                 raise Warning('Insufficient funds, transaction not possible')
 
             rate = await get_rate(
-                engine=request.app['pg_engine'], currency_from=wallet_from['currency'], currency_to=wallet_to['currency'])
+                engine=request.app['pg_engine'], currency_from=wallet_from['currency'],
+                currency_to=wallet_to['currency'])
 
             # Проверили, что:
             #     - кошельки существуют
@@ -199,14 +255,22 @@ class Transaction:
             #     - проверили, что достаточно средств для перевода
 
             info = {
-                'amount_from': amount,                      # сумма списания
-                'amount_to': amount * rate,                 # сумма зачисления
-                'commission': commission,                   # комиссия
-                'rate': rate,                               # курс конвертации валют
-                'wallet_from_before': wallet_from.copy(),   # Кошелек отправителя ДО (создаем копию, чтоб не изменялась)
-                'wallet_to_before': wallet_to.copy(),       # Кошелек получателя ДО (создаем копию, чтоб не изменялась)
-                'wallet_from_after': wallet_from,           # Кошелек отправителя ПОСЛЕ (ссылка на изменяемый объект)
-                'wallet_to_after': wallet_to                # Кошелек получателя ПОСЛЕ (ссылка на изменяемый объект)
+                # сумма списания
+                'amount_from': amount,
+                # сумма зачисления
+                'amount_to': amount * rate,
+                # комиссия
+                'commission': commission,
+                # курс конвертации валют
+                'rate': rate,
+                # Кошелек отправителя ДО (создаем копию, чтоб не изменялась)
+                'wallet_from_before': wallet_from.copy(),
+                # Кошелек получателя ДО (создаем копию, чтоб не изменялась)
+                'wallet_to_before': wallet_to.copy(),
+                # Кошелек отправителя ПОСЛЕ (ссылка на изменяемый объект)
+                'wallet_from_after': wallet_from,
+                # Кошелек получателя ПОСЛЕ (ссылка на изменяемый объект)
+                'wallet_to_after': wallet_to
             }
 
             wallet_from['balance'] -= commission
@@ -217,68 +281,17 @@ class Transaction:
             await create_transaction(engine=request.app['pg_engine'],
                                      wallet_from=wallet_from, wallet_to=wallet_to, info=info)
 
-            print(f'[Transaction.transaction] info:\n{info}')
+            print(f'[Transaction.transaction] info:\n{json.dumps(info, indent=2)}')
 
         except Exception as exc:
-            print('[try_catch_middleware] except:', exc)
-            # return web.json_response({
-            #     'status': 'error',
-            #     'message': str(exc)
-            # }, status=(401 if type(exc).__name__ == 'Warning' else 500))
+            print('[Transaction.transaction] except:', exc)
         finally:
-            print(request.app['semaphore'].keys())
+            print('[Transaction.transaction] semaphore:', request.app['semaphore'].keys())
             request.app['semaphore'] \
                 .setdefault(post['from'], asyncio.Semaphore(value=1)) \
                 .release()
 
-            return web.json_response({'status': 'succes', 'message': 'transaction ok'}, status=200)
-
-    # @staticmethod
-    # async def prod(self, app):
-    #     '''
-    #     '''
-    #     print('[Transaction.prod] start')
-    #     while True:
-    #
-    #         # if app['queue_transaction'].qsize() > 0:
-    #         try:
-    #         # if Transaction.queue.qsize() == 0:
-    #         #     continue
-    #         # if Transaction.queue.qsize() > 0:
-    #             print(f'''[Transaction.prod] queue size {app['queue_transaction'].qsize()}''')
-    #
-    #             request = await app['queue_transaction'].get()
-    #             print(f'[Transaction.prod] 000')
-    #             response = await self.coro(request=request)
-    #
-    #
-    #
-    #             print(f'[Transaction.prod] 001 response {response}')
-    #         # Transaction.queue.task_done()
-    #
-    #         except Exception as exc:
-    #
-    #             print('[Transaction.prod] except:', exc)
-    #
-    #         finally:
-    #             app['queue_transaction'].task_done()
-    #             print(f'[Transaction.prod] 002')
-            # else:
-            #     await asyncio.sleep(0.1)
-
-    @staticmethod
-    async def transaction(request):
-        '''Get all currencies without session
-        :param request:
-        :return:
-        '''
-        print('[Transaction.transaction] start')
-        # await request.app['queue_transaction'].put(request)
-        # await request.app['queue_transaction'].put(request)
-        # await request.app['queue_transaction'].put(request)
-        # await Transaction.queue.put(request)
-        # await Transaction.queue.put(request)
-        # await Transaction.queue.put(request)
-        await Transaction.coro(request)
-
-        return web.json_response({'status': 'succes', 'message': 'transaction to queue'}, status=200)
+            return web.json_response({
+                'status': 'succes',
+                'message': 'transaction ok'
+            }, status=200)
