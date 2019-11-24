@@ -9,8 +9,7 @@ from aiohttp_session import session_middleware
 from aiohttp import web
 import aiohttp_cors
 
-from handlers.auth import Auth
-from handlers.wallet import Wallet, Currency, Transaction
+from handlers import Auth, Wallet, Currency, Transaction
 from model import get_sekret_key
 from middleware import pg_engine_ctx, try_except_middleware,auth_middleware
 

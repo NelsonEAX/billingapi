@@ -5,7 +5,7 @@ from aiohttp_session import get_session
 from aiopg.sa import create_engine
 from aiohttp import web
 
-from model import get_dsn
+from model import get_dsn, migrate_data
 
 
 @web.middleware
@@ -74,8 +74,9 @@ async def pg_engine_ctx(app):
     :param app:
     :return:
     '''
-    print('[pg_engine_ctx] pg_engine create')
+    print('[pg_engine_ctx] pg_engine create ' + get_dsn())
     app['pg_engine'] = await create_engine(get_dsn())
+    await migrate_data(app['pg_engine'])
 
     yield
 

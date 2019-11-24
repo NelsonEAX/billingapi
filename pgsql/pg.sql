@@ -1,12 +1,3 @@
---
--- PostgreSQL database dump
---
-
--- Dumped from database version 10.10
--- Dumped by pg_dump version 10.10
-
--- Started on 2019-11-17 23:28:00
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -69,34 +60,14 @@ ALTER TABLE public.currency_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE public.currency_id_seq OWNED BY public.currency.id;
 
-
---
--- TOC entry 204 (class 1259 OID 17158)
--- Name: rate; Type: TABLE; Schema: public; Owner: postgres
---
-
 CREATE TABLE public.rate (
     "from" bigint NOT NULL,
     "to" bigint NOT NULL,
     percent double precision NOT NULL
 );
 
-
 ALTER TABLE public.rate OWNER TO postgres;
-
---
--- TOC entry 2864 (class 0 OID 0)
--- Dependencies: 204
--- Name: TABLE rate; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON TABLE public.rate IS 'Коэффициенты конвертации валют';
-
-
---
--- TOC entry 206 (class 1259 OID 17164)
--- Name: settings; Type: TABLE; Schema: public; Owner: postgres
---
 
 CREATE TABLE public.settings (
     id bigint NOT NULL,
@@ -106,49 +77,11 @@ CREATE TABLE public.settings (
     fee double precision NOT NULL
 );
 
-
 ALTER TABLE public.settings OWNER TO postgres;
-
---
--- TOC entry 2865 (class 0 OID 0)
--- Dependencies: 206
--- Name: TABLE settings; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON TABLE public.settings IS 'Настройки по умолчанию ';
-
-
---
--- TOC entry 2866 (class 0 OID 0)
--- Dependencies: 206
--- Name: COLUMN settings.wallets; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.settings.wallets IS 'id кошельков, создаваемых по умолчанию';
-
-
---
--- TOC entry 2867 (class 0 OID 0)
--- Dependencies: 206
--- Name: COLUMN settings.currency; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.settings.currency IS 'Валюта, на которую зачисляется баланс';
-
-
---
--- TOC entry 2868 (class 0 OID 0)
--- Dependencies: 206
--- Name: COLUMN settings.balance; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.settings.balance IS 'Баланс для нового пользователя ';
-
-
---
--- TOC entry 205 (class 1259 OID 17162)
--- Name: settings_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
 
 CREATE SEQUENCE public.settings_id_seq
     START WITH 1
@@ -157,22 +90,8 @@ CREATE SEQUENCE public.settings_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
 ALTER TABLE public.settings_id_seq OWNER TO postgres;
-
---
--- TOC entry 2869 (class 0 OID 0)
--- Dependencies: 205
--- Name: settings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
 ALTER SEQUENCE public.settings_id_seq OWNED BY public.settings.id;
-
-
---
--- TOC entry 203 (class 1259 OID 17149)
--- Name: transaction; Type: TABLE; Schema: public; Owner: postgres
---
 
 CREATE TABLE public.transaction (
     id bigint NOT NULL,
@@ -182,42 +101,10 @@ CREATE TABLE public.transaction (
     create_at timestamp without time zone NOT NULL
 );
 
-
 ALTER TABLE public.transaction OWNER TO postgres;
-
---
--- TOC entry 2870 (class 0 OID 0)
--- Dependencies: 203
--- Name: TABLE transaction; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON TABLE public.transaction IS 'Информационная таблица, хранящая информацию о транзакциях';
-
-
---
--- TOC entry 2871 (class 0 OID 0)
--- Dependencies: 203
--- Name: COLUMN transaction.sender; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.transaction.sender IS 'Кошелек отправителя';
-
-
---
--- TOC entry 2872 (class 0 OID 0)
--- Dependencies: 203
--- Name: COLUMN transaction.recipient; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.transaction.recipient IS 'Кошелек получателя';
-
-
---
--- TOC entry 2873 (class 0 OID 0)
--- Dependencies: 203
--- Name: COLUMN transaction.info; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.transaction.info IS 'Информация о переводе:
 id отправителя
 id получателя
@@ -227,12 +114,6 @@ id получателя
 Сумма списания
 Сумма зачисления';
 
-
---
--- TOC entry 202 (class 1259 OID 17147)
--- Name: transaction_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
-
 CREATE SEQUENCE public.transaction_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -240,22 +121,8 @@ CREATE SEQUENCE public.transaction_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
 ALTER TABLE public.transaction_id_seq OWNER TO postgres;
-
---
--- TOC entry 2874 (class 0 OID 0)
--- Dependencies: 202
--- Name: transaction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
 ALTER SEQUENCE public.transaction_id_seq OWNED BY public.transaction.id;
-
-
---
--- TOC entry 197 (class 1259 OID 17120)
--- Name: user; Type: TABLE; Schema: public; Owner: postgres
---
 
 CREATE TABLE public."user" (
     id bigint NOT NULL,
@@ -265,22 +132,8 @@ CREATE TABLE public."user" (
     surname text
 );
 
-
 ALTER TABLE public."user" OWNER TO postgres;
-
---
--- TOC entry 2875 (class 0 OID 0)
--- Dependencies: 197
--- Name: TABLE "user"; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON TABLE public."user" IS 'Информация о пользователях';
-
-
---
--- TOC entry 196 (class 1259 OID 17118)
--- Name: user_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
 
 CREATE SEQUENCE public.user_id_seq
     START WITH 1
@@ -289,22 +142,8 @@ CREATE SEQUENCE public.user_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
 ALTER TABLE public.user_id_seq OWNER TO postgres;
-
---
--- TOC entry 2876 (class 0 OID 0)
--- Dependencies: 196
--- Name: user_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
 ALTER SEQUENCE public.user_id_seq OWNED BY public."user".id;
-
-
---
--- TOC entry 201 (class 1259 OID 17136)
--- Name: wallet; Type: TABLE; Schema: public; Owner: postgres
---
 
 CREATE TABLE public.wallet (
     id bigint NOT NULL,
@@ -314,58 +153,12 @@ CREATE TABLE public.wallet (
     balance double precision DEFAULT 0 NOT NULL
 );
 
-
 ALTER TABLE public.wallet OWNER TO postgres;
-
---
--- TOC entry 2877 (class 0 OID 0)
--- Dependencies: 201
--- Name: TABLE wallet; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON TABLE public.wallet IS 'Информация о пользователях и их валютных счетах';
-
-
---
--- TOC entry 2878 (class 0 OID 0)
--- Dependencies: 201
--- Name: COLUMN wallet.currency; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.wallet.currency IS 'Ссылка на валюту';
-
-
---
--- TOC entry 2879 (class 0 OID 0)
--- Dependencies: 201
--- Name: COLUMN wallet."user"; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.wallet."user" IS 'Ссылка на пользователя, владельца счета';
-
-
---
--- TOC entry 2880 (class 0 OID 0)
--- Dependencies: 201
--- Name: COLUMN wallet.account; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.wallet.account IS '20-значный уникальный номер счета';
-
-
---
--- TOC entry 2881 (class 0 OID 0)
--- Dependencies: 201
--- Name: COLUMN wallet.balance; Type: COMMENT; Schema: public; Owner: postgres
---
-
 COMMENT ON COLUMN public.wallet.balance IS 'Баланс счета';
-
-
---
--- TOC entry 200 (class 1259 OID 17134)
--- Name: wallet_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
 
 CREATE SEQUENCE public.wallet_id_seq
     START WITH 1
@@ -374,63 +167,15 @@ CREATE SEQUENCE public.wallet_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
 ALTER TABLE public.wallet_id_seq OWNER TO postgres;
-
---
--- TOC entry 2882 (class 0 OID 0)
--- Dependencies: 200
--- Name: wallet_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
 ALTER SEQUENCE public.wallet_id_seq OWNED BY public.wallet.id;
-
-
---
--- TOC entry 2704 (class 2604 OID 17131)
--- Name: currency id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.currency ALTER COLUMN id SET DEFAULT nextval('public.currency_id_seq'::regclass);
-
-
---
--- TOC entry 2708 (class 2604 OID 17167)
--- Name: settings id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.settings ALTER COLUMN id SET DEFAULT nextval('public.settings_id_seq'::regclass);
-
-
---
--- TOC entry 2707 (class 2604 OID 17152)
--- Name: transaction id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.transaction ALTER COLUMN id SET DEFAULT nextval('public.transaction_id_seq'::regclass);
-
-
---
--- TOC entry 2703 (class 2604 OID 17123)
--- Name: user id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public."user" ALTER COLUMN id SET DEFAULT nextval('public.user_id_seq'::regclass);
-
-
---
--- TOC entry 2705 (class 2604 OID 17139)
--- Name: wallet id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
 ALTER TABLE ONLY public.wallet ALTER COLUMN id SET DEFAULT nextval('public.wallet_id_seq'::regclass);
 
 
---
--- TOC entry 2848 (class 0 OID 17128)
--- Dependencies: 199
--- Data for Name: currency; Type: TABLE DATA; Schema: public; Owner: postgres
---
 
 INSERT INTO public.currency VALUES (1, 'U.S. dollar', 'USD', '$');
 INSERT INTO public.currency VALUES (2, 'Euro', 'EUR', '€');
@@ -438,13 +183,6 @@ INSERT INTO public.currency VALUES (3, 'Yuan', 'CNY', '¥');
 INSERT INTO public.currency VALUES (4, 'Russian ruble', 'RUB', '₽');
 INSERT INTO public.currency VALUES (5, 'English Pound', 'GBP', '£');
 INSERT INTO public.currency VALUES (6, 'Japanese yen', 'JPY', '¥');
-
-
---
--- TOC entry 2853 (class 0 OID 17158)
--- Dependencies: 204
--- Data for Name: rate; Type: TABLE DATA; Schema: public; Owner: postgres
---
 
 INSERT INTO public.rate VALUES (1, 2, 0.90876999999999997);
 INSERT INTO public.rate VALUES (1, 3, 7.0247000000000002);
@@ -477,41 +215,12 @@ INSERT INTO public.rate VALUES (6, 3, 0.06454);
 INSERT INTO public.rate VALUES (6, 4, 0.59106999999999998);
 INSERT INTO public.rate VALUES (6, 5, 0.0071510000000000002);
 
-
---
--- TOC entry 2855 (class 0 OID 17164)
--- Dependencies: 206
--- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
 INSERT INTO public.settings VALUES (1, '{1,2,3}', 1, 100, 3);
-
-
---
--- TOC entry 2852 (class 0 OID 17149)
--- Dependencies: 203
--- Data for Name: transaction; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-
-
---
--- TOC entry 2846 (class 0 OID 17120)
--- Dependencies: 197
--- Data for Name: user; Type: TABLE DATA; Schema: public; Owner: postgres
---
 
 INSERT INTO public."user" VALUES (3, 'user3@example.com', '12345678', 'Oleg', 'Ivanov');
 INSERT INTO public."user" VALUES (2, 'user2@example.com', '12345678', 'Petr', 'Smirnov');
 INSERT INTO public."user" VALUES (1, 'user1@example.com', '12345678', 'Ivan', 'Petrov');
 INSERT INTO public."user" VALUES (6, 'user4@example.com', '12345678', 'Иван', 'Иванов');
-
-
---
--- TOC entry 2850 (class 0 OID 17136)
--- Dependencies: 201
--- Data for Name: wallet; Type: TABLE DATA; Schema: public; Owner: postgres
---
 
 INSERT INTO public.wallet VALUES (1, 1, 1, '42302810570000123456', 100);
 INSERT INTO public.wallet VALUES (2, 2, 1, '40840840570000123456', 0);
@@ -523,31 +232,8 @@ INSERT INTO public.wallet VALUES (7, 1, 3, '42307810570000123456', 100);
 INSERT INTO public.wallet VALUES (8, 2, 3, '40817840570000123456', 0);
 INSERT INTO public.wallet VALUES (9, 3, 3, '42301978570000123456', 0);
 
-
---
--- TOC entry 2883 (class 0 OID 0)
--- Dependencies: 198
--- Name: currency_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('public.currency_id_seq', 6, true);
-
-
---
--- TOC entry 2884 (class 0 OID 0)
--- Dependencies: 205
--- Name: settings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('public.settings_id_seq', 4, true);
-
-
---
--- TOC entry 2885 (class 0 OID 0)
--- Dependencies: 202
--- Name: transaction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('public.transaction_id_seq', 1, false);
 
 
@@ -671,10 +357,4 @@ CREATE UNIQUE INDEX unique_user_currency ON public.wallet USING btree ("user", c
 
 COMMENT ON INDEX public.unique_user_currency IS 'У пользователя может быть только один счет для одной валюты';
 
-
--- Completed on 2019-11-17 23:28:00
-
---
--- PostgreSQL database dump complete
---
 

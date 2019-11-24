@@ -1,37 +1,40 @@
 # -*- coding: utf-8 -*-
 '''The file contains functions for working with the database'''
 
+import os
 import base64
 import time
 import json
 import random
 import string
-from os.path import isfile
 
 import sqlalchemy as sa
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from envparse import env
 
-# Reading settings file
-if not isfile('.env'):
+# Reading settings file from
+if os.path.isfile('../.env'):
     raise Exception('Need .env file')
-env.read_envfile('.env')
+env.read_envfile('../.env')
 
+def get_env(env):
+    ''''''
+    return os.getenv(env) if os.getenv(env) is not None else env.str(env)
 
 # Database connection parameters obtained from .env
 def get_dsn():
     '''DB connection string
     :return:
     '''
-    return f"dbname={env.str('PG_DATABASE')} user={env.str('PG_USERNAME')} " \
-           f"password={env.str('PG_PASSWORD')} host={env.str('PG_SERVER')}"
+    return f"dbname={get_env('PG_DATABASE')} user={get_env('PG_USERNAME')} " \
+           f"password={get_env('PG_PASSWORD')} host={get_env('PG_SERVER')} port={get_env('PG_PORT')}"
 
 
 def get_sekret_key():
     '''SECRET_KEY for the session
     :return:
     '''
-    return EncryptedCookieStorage(base64.urlsafe_b64decode(env.str('SECRET_KEY')))
+    return EncryptedCookieStorage(base64.urlsafe_b64decode(get_env('SECRET_KEY')))
 
 
 def get_timestamp_str():
@@ -39,8 +42,6 @@ def get_timestamp_str():
     :return:
     '''
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-
-
 
 
 metadata = sa.MetaData()
@@ -98,6 +99,25 @@ tb_user = sa.Table(
     sa.Column('surname', sa.String(255)))
 
 
+async def migrate_data(engine):
+    '''
+    :param engine:
+    :return:
+    '''
+    async with engine.acquire() as conn:
+        async for row in await conn.execute(
+                '''select count(*) from INFORMATION_SCHEMA.tables where TABLE_SCHEMA = 'public'
+                and TABLE_NAME in ('currency', 'rate', 'settings', 'transaction', 'wallet', 'user');'''):
+
+            if row[0] > 0:
+                return
+
+            with open('../pgsql/pg.sql', encoding='utf-8') as f:
+                sql = '\n'.join(f.readlines())
+
+            await conn.execute(sql)
+
+
 async def get_currencies(engine):
     '''
     :param engine:
@@ -133,7 +153,17 @@ async def get_rates(engine):
                 from rate r
                 left join currency cf on cf.id = r.from
                 left join currency ct on ct.id = r.to'''):
-            rates.append({'from': row[0], 'to': row[1], 'percent': row[2]})
+            rates.append({
+                'from_title': row[0],
+                'from_code': row[1],
+                'from_symbol': row[2],
+                'from': row[3],
+                'to': row[4],
+                'percent': row[5],
+                'to_title': row[6],
+                'to_code': row[7],
+                'to_symbol': row[8]
+            })
         return rates
 
 async def get_user_by_email(engine, email):
@@ -161,7 +191,7 @@ async def get_user_wallets(engine, user_id):
     async with engine.acquire() as conn:
         wallets = []
         async for row in await conn.execute(
-                f'''select w.id, c.title, c.symbol, w.account, w.balance
+                f'''select w.id, c.title, c.symbol, w.account, w.balance, w.currency
                 from wallet as w
                 left join currency as c on c.id = w.currency
                 where w.user = {user_id};'''):
@@ -172,7 +202,8 @@ async def get_user_wallets(engine, user_id):
                 'symbol': row[2],
                 'account': row[3],
                 'balance': row[4],
-                'description': f'{row[3]} : {row[2]} {row[4]}'
+                'description': f'{row[3]} : {row[2]} {row[4]}',
+                'currency': row[5]
             })
 
         return wallets
@@ -185,7 +216,7 @@ async def get_all_wallets(engine):
     async with engine.acquire() as conn:
         wallets = []
         async for row in await conn.execute(
-                f'''select w.id, c.title, c.symbol, w.account
+                f'''select w.id, c.title, c.symbol, w.account, w.currency
                 from wallet as w
                 left join currency as c on c.id = w.currency;'''):
             wallets.append({
@@ -193,7 +224,8 @@ async def get_all_wallets(engine):
                 'title': row[1],
                 'symbol': row[2],
                 'account': row[3],
-                'description': f'{row[3]} : {row[2]}'
+                'description': f'{row[3]} : {row[2]}',
+                'currency': row[4]
             })
 
         return wallets
