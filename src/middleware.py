@@ -57,7 +57,7 @@ async def pg_engine_ctx(app):
     '''
     print('[CTX.Engine] create ' + get_dsn())
     app['pg_engine'] = await create_engine(get_dsn())
-    await migrate_data(app['pg_engine'])
+    await migrate_data(app)
 
     yield
 

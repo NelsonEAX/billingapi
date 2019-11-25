@@ -9,6 +9,7 @@ import random
 import string
 
 import sqlalchemy as sa
+from aiopg.sa import create_engine
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from envparse import env
 
@@ -101,25 +102,29 @@ USER = sa.Table(
     sa.Column('surname', sa.String(255)))
 
 
-async def migrate_data(engine):
+async def migrate_data(app):
     '''
-    :param engine:
+    :param app:
     :return:
     '''
-    async with engine.acquire() as conn:
+    async with app['pg_engine'].acquire() as conn:
         async for row in await conn.execute(
                 '''select count(*) from INFORMATION_SCHEMA.tables
                 where TABLE_SCHEMA = 'public' and TABLE_NAME in
                 ('currency', 'rate', 'settings', 'transaction', 'wallet', 'user');'''):
 
+            # If there is a base, exit
             if row[0] > 0:
                 return
 
-            with open('../pgsql/pg.sql', encoding='utf-8') as file:
-                sql = '\n'.join(file.readlines())
+        with open('../pgsql/pg.sql', encoding='utf-8') as file:
+            sql = '\n'.join(file.readlines())
 
-            await conn.execute(sql)
+        await conn.execute(
+            f'''{sql}''')
 
+        app['pg_engine'].close()
+        app['pg_engine'] = await create_engine(get_dsn())
 
 async def get_currencies(engine):
     '''
