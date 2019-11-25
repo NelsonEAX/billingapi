@@ -6,17 +6,12 @@ services:
     restart: always
     hostname: ${PG_SERVER}
     expose:
-      - 6432
-#    ports:
-#      - 6432:5432
-    volumes:
-      - pgsql:/var/lib/postgresql/data
+      - ${PG_PORT}
     environment:
       POSTGRES_PASSWORD: ${PG_PASSWORD}
       POSTGRES_USER: ${PG_USERNAME}
       POSTGRES_DB: ${PG_DATABASE}
-#    networks:
-#      - code-network
+
 
   aiohttp:
     build: src/
@@ -25,41 +20,35 @@ services:
     ports:
       - 5000:8080
     volumes:
-      - ./src/:/aiohttp/
+      - ./src/:/home/aiohttp/
+      - ./pgsql/:/home/pgsql/
     environment:
       SECRET_KEY: ${SECRET_KEY}
       PG_DATABASE: ${PG_DATABASE}
       PG_USERNAME: ${PG_USERNAME}
       PG_PASSWORD: ${PG_PASSWORD}
       PG_SERVER: ${PG_SERVER}
-      PG_PORT: 5432
+      PG_PORT: ${PG_PORT}
 
     depends_on:
       - pgsql
 
 
-  vuejs:
-    build: front/
-    command: npm run serve
-    restart: always
-    ports:
-      - 8080:8080
-    volumes:
-      - ./front/:/vuejs/
-#    environment:
-#      SECRET_KEY: ${SECRET_KEY}
-#      PG_DATABASE: ${PG_DATABASE}
-#      PG_USERNAME: ${PG_USERNAME}
-#      PG_PASSWORD: ${PG_PASSWORD}
-#      PG_SERVER: ${PG_SERVER}
-#      PG_PORT: 5432
-
-    depends_on:
-      - aiohttp
-
-#networks:
-#  code-network:
-#    driver: bridge
-
-volumes:
-  pgsql:
+#  vuejs:
+#    build: front/
+#    command: npm run serve
+#    restart: always
+#    ports:
+#      - 8080:8080
+#    volumes:
+#      - ./front/:/home/vuejs/
+##    environment:
+##      SECRET_KEY: ${SECRET_KEY}
+##      PG_DATABASE: ${PG_DATABASE}
+##      PG_USERNAME: ${PG_USERNAME}
+##      PG_PASSWORD: ${PG_PASSWORD}
+##      PG_SERVER: ${PG_SERVER}
+##      PG_PORT: 5432
+#
+#    depends_on:
+#      - aiohttp
