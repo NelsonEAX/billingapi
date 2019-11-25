@@ -22,8 +22,7 @@ async def auth_middleware(request, handler):
     session = await get_session(request)
     allowed_path = guest_path if session.get("email", None) is None else user_path
 
-    post = await request.json()
-    result = f'path="{request.path}" post="{post}" {str(allowed_path)}'
+    result = f'path="{request.path}" {str(allowed_path)}'
     if request.path in allowed_path:
         print(f'[Middleware.Auth] allowed {result}')
         return await handler(request)
